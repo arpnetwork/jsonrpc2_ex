@@ -2,7 +2,7 @@ defmodule JSONRPC2.Server.Plug do
   import Plug.Conn
 
   alias JSONRPC2.{Response, Server}
-  alias Plug.Conn.Status
+  alias Plug.Conn.{Status, Utils}
 
   def init(opts) do
     {modules, opts} = Keyword.pop(opts, :modules, [])
@@ -12,7 +12,8 @@ defmodule JSONRPC2.Server.Plug do
   def call(conn, opts) do
     with "POST" <- conn.method,
          "/" <- conn.request_path,
-         {_, "application/json"} <- List.keyfind(conn.req_headers, "content-type", 0),
+         {_, type} when is_binary(type) <- List.keyfind(conn.req_headers, "content-type", 0),
+         {:ok, "application", "json", _} <- Utils.media_type(type),
          {:ok, body, conn} <- read_body(conn) do
       case Keyword.fetch!(opts, :rpc) |> Server.apply(body) do
         %Response{} = resp ->
