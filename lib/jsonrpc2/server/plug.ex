@@ -15,6 +15,8 @@ defmodule JSONRPC2.Server.Plug do
          {_, type} when is_binary(type) <- List.keyfind(conn.req_headers, "content-type", 0),
          {:ok, "application", "json", _} <- Utils.media_type(type),
          {:ok, body, conn} <- read_body(conn) do
+      Process.put(:remote_ip, conn.remote_ip)
+
       case Keyword.fetch!(opts, :rpc) |> Server.apply(body) do
         %Response{} = resp ->
           conn
