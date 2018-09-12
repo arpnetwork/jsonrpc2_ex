@@ -12,56 +12,62 @@ defmodule JSONRPC2.Request do
       {:ok, %JSONRPC2.Request{id: 1, jsonrpc: "2.0", method: "subtract", params: [42, 23]}}
   """
 
-  alias JSONRPC2.Misc
-  alias Poison.{ParseError, DecodeError}
+  alias JSONRPC2.Object
 
-  defstruct jsonrpc: :undefined, method: :undefined, params: [], id: :undefined
+  import JSONRPC2.Object, only: :macros
 
+  defstruct jsonrpc: :undefined, method: :undefined, params: :undefined, id: :undefined
+
+  @doc """
+  Builds a new `Request` object.
+  """
   def new(method, fields \\ []) when is_binary(method) do
     %__MODULE__{jsonrpc: JSONRPC2.version(), method: method} |> struct!(fields)
   end
 
+  @doc """
+  Decodes a JSON encoded string into the `Request` object/objects.
+  """
   def decode(data) do
-    {:ok, decode!(data)}
-  rescue
-    _exception in [ParseError, DecodeError] ->
-      :parse_error
-  end
-
-  def decode!(data) do
-    Poison.decode!(data, as: %__MODULE__{})
-  end
-
-  def encode!(req) do
-    unless valid?(req) do
-      raise ArgumentError
+    with {:error, :invalid} <- Object.decode(data, %__MODULE__{}) do
+      {:error, :invalid_request}
     end
-
-    req |> Misc.strip() |> Poison.encode!()
   end
 
+  @doc """
+  Encodes the `Request` object/objects into a JSON encoded string.
+  """
+  defdelegate encode!(resp), to: Object
+
+  @doc """
+  Returns the `id` of `Request` object.
+  """
+  def id(req) do
+    if is_id(req.id), do: req.id
+  end
+
+  @doc """
+  Returns true if `req` is a notify `Request` object; otherwise returns false.
+  """
   def is_notify(req) do
     valid?(req) && req.id == :undefined
   end
 
-  def valid?(req) do
-    req.jsonrpc == JSONRPC2.version() && valid_id?(req.id) && valid_method?(req.method) &&
+  @doc """
+  Returns true if `req` is a valid `Request`; otherwise returns false.
+  """
+  def valid?(%__MODULE__{} = req) do
+    req.jsonrpc == JSONRPC2.version() && valid_id?(req.id) && is_binary(req.method) &&
       valid_params?(req.params)
   end
 
-  def id(req) do
-    if is_binary(req.id) || is_integer(req.id), do: req.id
-  end
+  def valid?(_), do: false
 
   defp valid_id?(id) do
-    id == :undefined || is_binary(id) || is_integer(id)
-  end
-
-  defp valid_method?(method) do
-    is_binary(method)
+    id == :undefined || is_id(id)
   end
 
   defp valid_params?(params) do
-    is_list(params) || is_map(params)
+    params == :undefined || is_params(params)
   end
 end

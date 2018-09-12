@@ -23,19 +23,29 @@ defmodule JSONRPC2.Response do
       }
   """
 
-  alias JSONRPC2.Misc
-  alias Poison.{ParseError, DecodeError}
+  alias JSONRPC2.{Misc, Object}
+
+  import JSONRPC2.Object, only: :macros
 
   defstruct jsonrpc: :undefined, result: :undefined, error: :undefined, id: :undefined
 
+  @doc """
+  Builds a new `Response` object.
+  """
   def new(fields \\ []) do
     %__MODULE__{jsonrpc: JSONRPC2.version()} |> struct!(fields)
   end
 
+  @doc """
+  Builds a new `Request` object with given `result`.
+  """
   def result(res, id) do
     new(result: res, id: id)
   end
 
+  @doc """
+  Builds a new `Request` object with given `error`.
+  """
   def error(reason, id \\ nil)
 
   def error({reason, message, data}, id) do
@@ -68,36 +78,62 @@ defmodule JSONRPC2.Response do
     new(error: err, id: id)
   end
 
+  @doc """
+  Decodes a JSON encoded string into the `Response` object/objects.
+  """
   def decode(data) do
-    {:ok, decode!(data)}
-  rescue
-    _exception in [ParseError, DecodeError] ->
-      :parse_error
-  end
+    case Object.decode(data, %__MODULE__{}) do
+      {:ok, resp} ->
+        {:ok, Misc.map(resp, &transform/1)}
 
-  def decode!(data) do
-    Poison.decode!(data, as: %__MODULE__{})
-  end
+      {:error, :invalid} ->
+        {:error, :invalid_response}
 
-  def encode!(resp) do
-    unless valid?(resp) do
-      raise ArgumentError
+      error ->
+        error
     end
-
-    resp |> Misc.strip() |> Poison.encode!()
   end
 
+  @doc """
+  Encodes the `Response` object/objects into a JSON encoded string.
+  """
+  defdelegate encode!(resp), to: Object
+
+  @doc """
+  Returns true if `resp` is success; otherwise returns false.
+  """
   def success?(resp) do
     valid_result?(resp)
   end
 
-  def valid?(resp) do
-    resp.jsonrpc == JSONRPC2.version() && valid_id?(resp.id) &&
+  @doc """
+  Returns true if `resp` is a valid `Response`; otherwise returns false.
+  """
+  def valid?(%__MODULE__{} = resp) do
+    resp.jsonrpc == JSONRPC2.version() && is_id(resp.id) &&
       (valid_result?(resp) || valid_error?(resp))
   end
 
-  defp valid_id?(id) do
-    is_nil(id) || is_binary(id) || is_integer(id)
+  def valid?(_), do: false
+
+  defp transform(resp) do
+    if is_map(resp.error) do
+      fun = fn {key, value} ->
+        if key in ["code", "message"] do
+          {String.to_existing_atom(key), value}
+        end
+      end
+
+      error =
+        resp.error
+        |> Stream.map(fun)
+        |> Stream.reject(&is_nil/1)
+        |> Enum.into(%{})
+
+      struct!(resp, error: error)
+    else
+      resp
+    end
   end
 
   defp valid_result?(resp) do
@@ -124,6 +160,9 @@ defmodule JSONRPC2.Response do
   end
 
   defp reason_to_string(reason) when is_atom(reason) do
-    reason |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
+    reason
+    |> Atom.to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
   end
 end

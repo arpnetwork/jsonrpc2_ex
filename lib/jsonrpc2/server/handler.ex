@@ -1,4 +1,8 @@
 defmodule JSONRPC2.Server.Handler do
+  @moduledoc """
+  JSON RPC Server handler.
+  """
+
   alias JSONRPC2.Misc
 
   defmacro __using__(opts) do
@@ -38,6 +42,9 @@ defmodule JSONRPC2.Server.Handler do
     end
   end
 
+  @doc """
+  Returns current JSON RPC method name.
+  """
   defmacro method do
     mod = Module.get_attribute(__CALLER__.module, :name)
     fun = elem(__CALLER__.function, 0)
