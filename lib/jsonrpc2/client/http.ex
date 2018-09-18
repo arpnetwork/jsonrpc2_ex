@@ -1,3 +1,21 @@
+defmodule JSONRPC2.Client.HTTPError do
+  @moduledoc false
+
+  defexception [:code, :message]
+
+  def exception(value) when is_map(value) do
+    struct(%__MODULE__{}, value)
+  end
+
+  def exception(value) when is_atom(value) do
+    %__MODULE__{message: JSONRPC2.Misc.reason_to_string(value)}
+  end
+
+  def exception(value) do
+    %__MODULE__{message: inspect(value)}
+  end
+end
+
 defmodule JSONRPC2.Client.HTTP do
   @moduledoc """
   A JSON RPC HTTP Client.
@@ -14,6 +32,32 @@ defmodule JSONRPC2.Client.HTTP do
       import JSONRPC2.Client.HTTP
 
       @name unquote(name)
+      @definitions []
+
+      @before_compile JSONRPC2.Client.HTTP
+    end
+  end
+
+  defmacro __before_compile__(_env) do
+    alias JSONRPC2.Client.HTTP
+
+    quote do
+      defmacro batch(url, do: block) do
+        module = __MODULE__
+        definitions = @definitions
+        {_, _, block} = block
+
+        quote do
+          import unquote(module), only: unquote(definitions)
+
+          reqs =
+            unquote(block)
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
+          HTTP.batch(unquote(url), reqs)
+        end
+      end
     end
   end
 
@@ -54,18 +98,54 @@ defmodule JSONRPC2.Client.HTTP do
     |> run(url)
   end
 
-  defp define(type, {name, meta, args}) do
+  defp define(type, {name, meta, args} = call) do
     args = with nil <- args, do: []
+    arity = length(args)
     url = Macro.var(:url, nil)
-    call = {name, meta, [url | args]}
+    remote_args = [url | args]
+    remote_call = {name, meta, remote_args}
     args = with [{:%{}, _, _} = named_params] <- args, do: named_params
 
+    trailing_bang_call =
+      if type == :call do
+        trailing_bang_call = {to_trailing_bang(name), meta, remote_args}
+
+        quote do
+          def unquote(trailing_bang_call) do
+            case unquote(remote_call) do
+              {:ok, value} ->
+                value
+
+              {:error, reason} ->
+                raise JSONRPC2.Client.HTTPError, reason
+            end
+          end
+        end
+      else
+        quote do
+        end
+      end
+
     quote location: :keep do
+      @definitions [{unquote(name), unquote(arity)} | @definitions]
+
       def unquote(call) do
+        method = Misc.to_method_name(@name, unquote(name))
+        {unquote(type), method, unquote(args)}
+      end
+
+      def unquote(remote_call) do
         method = Misc.to_method_name(@name, unquote(name))
         unquote(type)(unquote(url), method, unquote(args))
       end
+
+      unquote(trailing_bang_call)
     end
+  end
+
+  def ins(value) do
+    Macro.to_string(value) |> IO.puts()
+    value
   end
 
   defp run(req, url) do
@@ -148,5 +228,12 @@ defmodule JSONRPC2.Client.HTTP do
 
   defp build({:notify, method, params}) do
     Request.new(method, params: params)
+  end
+
+  defp to_trailing_bang(name) do
+    name
+    |> Atom.to_string()
+    |> Kernel.<>("!")
+    |> String.to_atom()
   end
 end

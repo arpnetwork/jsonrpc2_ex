@@ -62,7 +62,7 @@ defmodule JSONRPC2.Response do
 
   def error(reason, message, data, id) when is_atom(reason) do
     code = reason_to_code(reason)
-    message = with nil <- message, do: reason_to_string(reason)
+    message = with nil <- message, do: Misc.reason_to_string(reason)
     error(code, message, data, id)
   end
 
@@ -157,12 +157,5 @@ defmodule JSONRPC2.Response do
       :server_error -> -32000
       _ -> -32099
     end
-  end
-
-  defp reason_to_string(reason) when is_atom(reason) do
-    reason
-    |> Atom.to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
   end
 end

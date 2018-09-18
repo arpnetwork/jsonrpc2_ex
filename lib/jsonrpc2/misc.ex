@@ -58,6 +58,13 @@ defmodule JSONRPC2.Misc do
     <<to_lower_char(ch), rest::binary>>
   end
 
+  def reason_to_string(reason) when is_atom(reason) do
+    reason
+    |> Atom.to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
+
   @doc """
   Determines if the value is blank.
   """
