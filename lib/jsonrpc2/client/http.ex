@@ -113,7 +113,7 @@ defmodule JSONRPC2.Client.HTTP do
   end
 
   defp transform(resps, ids) when is_nonempty_list(resps) do
-    if resps |> Enum.map(& &1.id) |> Enum.sort() == ids do
+    if resps |> Enum.map(& &1.id) |> Enum.sort_by(&String.to_integer/1) == ids do
       resps
       |> Enum.sort_by(& &1.id)
       |> Enum.map(&transform(&1, &1.id))
