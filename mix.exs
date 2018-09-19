@@ -7,7 +7,12 @@ defmodule JSONRPC2.MixProject do
       version: "0.2.0",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      description: "JSON-RPC 2.0 for Elixir.",
+      package: [
+        licenses: ["Apache 2.0"],
+        links: %{"GitHub" => "https://github.com/arpnetwork/jsonrpc2_ex"}
+      ]
     ]
   end
 
