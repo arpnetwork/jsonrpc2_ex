@@ -5,6 +5,8 @@ defmodule JSONRPC2.Server do
 
   alias JSONRPC2.{Misc, Request, Response}
 
+  require Logger
+
   @doc """
   Builds a new JSON RPC Server.
   """
@@ -138,8 +140,19 @@ defmodule JSONRPC2.Server do
       _ -> :method_not_found
     end
   rescue
-    FunctionClauseError -> :invalid_params
-    _ -> :internal_error
+    FunctionClauseError ->
+      :invalid_params
+
+    error ->
+      Logger.warn(fn ->
+        {stacktrace, _} =
+          System.stacktrace()
+          |> Enum.split_while(&(elem(&1, 0) != __MODULE__))
+
+        Exception.format(:error, error, stacktrace)
+      end)
+
+      :internal_error
   end
 
   defp parse(method) do
