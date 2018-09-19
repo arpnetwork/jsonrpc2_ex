@@ -29,7 +29,7 @@ defmodule JSONRPC2.Client.HTTP do
     name = Keyword.get_lazy(opts, :name, fn -> Misc.module_name(__CALLER__.module) end)
 
     quote location: :keep do
-      import JSONRPC2.Client.HTTP
+      import JSONRPC2.Client.HTTP, only: [defcall: 1, defnotify: 1]
 
       @name unquote(name)
       @definitions []
@@ -41,7 +41,7 @@ defmodule JSONRPC2.Client.HTTP do
   defmacro __before_compile__(_env) do
     alias JSONRPC2.Client.HTTP
 
-    quote do
+    quote location: :keep do
       defmacro batch(url, do: block) do
         module = __MODULE__
         definitions = @definitions
@@ -136,7 +136,7 @@ defmodule JSONRPC2.Client.HTTP do
 
       def unquote(remote_call) do
         method = Misc.to_method_name(@name, unquote(name))
-        unquote(type)(unquote(url), method, unquote(args))
+        JSONRPC2.Client.HTTP.unquote(type)(unquote(url), method, unquote(args))
       end
 
       unquote(trailing_bang_call)
