@@ -41,11 +41,26 @@ defmodule JSONRPC2.Object do
     |> Poison.encode!()
   end
 
+  defmacrop transform(args) do
+    Code.ensure_loaded(Poison.Decode)
+
+    fun =
+      if function_exported?(Poison.Decode, :transform, 2) do
+        :transform
+      else
+        :decode
+      end
+
+    quote location: :keep do
+      apply(Poison.Decode, unquote(fun), unquote(args))
+    end
+  end
+
   @doc """
   Transforms a map as a JSON RPC object.
   """
   def transform(value, as) when is_map(value) do
-    Poison.Decode.decode(value, %{as: as})
+    transform([value, %{as: as}])
   end
 
   defp strip(%{__struct__: _} = obj) do

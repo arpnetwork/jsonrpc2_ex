@@ -26,9 +26,10 @@ defmodule JSONRPC2.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:poison, "~> 3.1"},
+      {:poison, "~> 4.0 or ~> 3.0"},
       {:plug, "~> 1.6"},
-      {:hackney, "~> 1.13"}
+      {:hackney, "~> 1.13"},
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
     ]
   end
 end
