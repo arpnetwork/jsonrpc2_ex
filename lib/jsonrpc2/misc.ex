@@ -58,6 +58,9 @@ defmodule JSONRPC2.Misc do
     <<to_lower_char(ch), rest::binary>>
   end
 
+  @doc """
+  Converts an atom `reason` to readable string.
+  """
   def reason_to_string(reason) when is_atom(reason) do
     reason
     |> Atom.to_string()
