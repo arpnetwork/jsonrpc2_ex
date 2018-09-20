@@ -143,11 +143,6 @@ defmodule JSONRPC2.Client.HTTP do
     end
   end
 
-  def ins(value) do
-    Macro.to_string(value) |> IO.puts()
-    value
-  end
-
   defp run(req, url) do
     unless Misc.all?(req, &Request.valid?/1) do
       raise ArgumentError
