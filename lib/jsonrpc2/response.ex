@@ -82,7 +82,7 @@ defmodule JSONRPC2.Response do
   Decodes a JSON encoded string into the `Response` object/objects.
   """
   def decode(data) do
-    case Object.decode(data, %__MODULE__{}) do
+    case Object.decode(data, __MODULE__) do
       {:ok, resp} ->
         {:ok, Misc.map(resp, &transform/1)}
 

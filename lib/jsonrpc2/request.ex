@@ -29,7 +29,7 @@ defmodule JSONRPC2.Request do
   Decodes a JSON encoded string into the `Request` object/objects.
   """
   def decode(data) do
-    with {:error, :invalid} <- Object.decode(data, %__MODULE__{}) do
+    with {:error, :invalid} <- Object.decode(data, __MODULE__) do
       {:error, :invalid_request}
     end
   end
