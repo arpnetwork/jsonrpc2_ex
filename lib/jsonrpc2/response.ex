@@ -119,7 +119,7 @@ defmodule JSONRPC2.Response do
   defp transform(resp) do
     if is_map(resp.error) do
       fun = fn {key, value} ->
-        if key in ["code", "message"] do
+        if key in ["code", "message", "data"] do
           {String.to_existing_atom(key), value}
         end
       end
