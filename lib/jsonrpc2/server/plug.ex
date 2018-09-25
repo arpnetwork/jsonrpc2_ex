@@ -3,10 +3,11 @@ defmodule JSONRPC2.Server.Plug do
   JSON RPC Server for Plug.
   """
 
-  import Plug.Conn
-
   alias JSONRPC2.{Response, Server}
   alias Plug.Conn.{Status, Utils}
+
+  import JSONRPC2.Misc, only: :macros
+  import Plug.Conn
 
   @doc false
   def init(opts) do
@@ -29,7 +30,7 @@ defmodule JSONRPC2.Server.Plug do
         %Response{} = resp ->
           send_rpc_resp(conn, resp)
 
-        resps when is_list(resps) and length(resps) > 0 ->
+        resps when is_nonempty_list(resps) ->
           send_rpc_resp(conn, resps)
 
         _ ->

@@ -5,22 +5,27 @@ defmodule JSONRPC2.Response do
   ## Examples
 
       iex> alias JSONRPC2.Response
-      iex> resp = Response.new(result: [42, 23], id: 1)
+      iex> resp = Response.result([42, 23], 1)
+      iex> Response.success?(resp)
+      true
       iex> data = Response.encode!(resp)
       ~s({"result":[42,23],"jsonrpc":"2.0","id":1})
       iex> Response.decode(data)
       {:ok, %JSONRPC2.Response{id: 1, jsonrpc: "2.0", result: [42, 23]}}
-      iex> Response.error({:method_not_found, "Method not found", %{method: "subtract"}}, 1)
-      %JSONRPC2.Response{
-        error: %{
-          code: -32601,
-          data: %{method: "subtract"},
-          message: "Method not found"
-        },
-        id: 1,
-        jsonrpc: "2.0",
-        result: :undefined
-      }
+      iex> Response.error({:method_not_found, "Method not found", "subtract"}, 1)
+      ...> |> Response.encode!()
+      ...> |> Response.decode()
+      {:ok,
+       %JSONRPC2.Response{
+         error: %{
+           code: -32601,
+           data: "subtract",
+           message: "Method not found"
+         },
+         id: 1,
+         jsonrpc: "2.0",
+         result: :undefined
+       }}
   """
 
   alias JSONRPC2.{Misc, Object}
@@ -45,15 +50,40 @@ defmodule JSONRPC2.Response do
 
   @doc """
   Builds a new `Request` object with given `error`.
+
+  ## Examples
+
+      iex> alias JSONRPC2.Response
+      iex> Response.error(:internal_error)
+      %JSONRPC2.Response{
+        error: %{code: -32603, message: "Internal error"},
+        id: nil,
+        jsonrpc: "2.0",
+        result: :undefined
+      }
+      iex> Response.error({-32000, "Some error"}, 1)
+      %JSONRPC2.Response{
+        error: %{code: -32000, message: "Some error"},
+        id: 1,
+        jsonrpc: "2.0",
+        result: :undefined
+      }
+      iex> Response.error({-32000, "Some error", 123}, 1)
+      %JSONRPC2.Response{
+        error: %{code: -32000, message: "Some error", data: 123},
+        id: 1,
+        jsonrpc: "2.0",
+        result: :undefined
+      }
   """
   def error(reason, id \\ nil)
 
-  def error({reason, message, data}, id) do
-    error(reason, message, data, id)
-  end
-
   def error({reason, message}, id) do
     error(reason, message, nil, id)
+  end
+
+  def error({reason, message, data}, id) do
+    error(reason, message, data, id)
   end
 
   def error(reason, id) do
@@ -80,6 +110,20 @@ defmodule JSONRPC2.Response do
 
   @doc """
   Decodes a JSON encoded string into the `Response` object/objects.
+
+  ## Examples
+
+      iex> alias JSONRPC2.Response
+      iex> Response.decode(~s({"id": 1, "jsonrpc": "2.0", "result": 3}))
+      {:ok,
+        %JSONRPC2.Response{
+          error: :undefined,
+          id: 1,
+          jsonrpc: "2.0",
+          result: 3
+        }}
+      iex> Response.decode("")
+      {:error, :parse_error}
   """
   def decode(data) do
     case Object.decode(data, __MODULE__) do
@@ -108,6 +152,16 @@ defmodule JSONRPC2.Response do
 
   @doc """
   Returns true if `resp` is a valid `Response`; otherwise returns false.
+
+  ## Examples
+
+      iex> alias JSONRPC2.Response
+      iex> Response.valid?(%Response{jsonrpc: "2.0", result: 0, id: 1})
+      true
+      iex> Response.valid?(%Response{jsonrpc: "2.0", error: %{code: -32601, message: "Method not found"}, id: 1})
+      true
+      iex> Response.valid?(%Response{})
+      false
   """
   def valid?(%__MODULE__{} = resp) do
     resp.jsonrpc == JSONRPC2.version() && is_id(resp.id) &&
@@ -115,6 +169,21 @@ defmodule JSONRPC2.Response do
   end
 
   def valid?(_), do: false
+
+  @doc """
+  Converts `atom` reason to `integer` code.
+  """
+  def reason_to_code(reason) when is_atom(reason) do
+    case reason do
+      :parse_error -> -32700
+      :invalid_request -> -32600
+      :method_not_found -> -32601
+      :invalid_params -> -32602
+      :internal_error -> -32603
+      :server_error -> -32000
+      _ -> -32099
+    end
+  end
 
   defp transform(resp) do
     if is_map(resp.error) do
@@ -145,17 +214,5 @@ defmodule JSONRPC2.Response do
 
     resp.result == :undefined && is_map(resp.error) && is_integer(error.(:code)) &&
       is_binary(error.(:message))
-  end
-
-  defp reason_to_code(reason) when is_atom(reason) do
-    case reason do
-      :parse_error -> -32700
-      :invalid_request -> -32600
-      :method_not_found -> -32601
-      :invalid_params -> -32602
-      :internal_error -> -32603
-      :server_error -> -32000
-      _ -> -32099
-    end
   end
 end

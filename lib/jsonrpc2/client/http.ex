@@ -10,15 +10,26 @@ defmodule JSONRPC2.Client.HTTPError do
   def exception(value) when is_atom(value) do
     %__MODULE__{message: JSONRPC2.Misc.reason_to_string(value)}
   end
-
-  def exception(value) do
-    %__MODULE__{message: inspect(value)}
-  end
 end
 
 defmodule JSONRPC2.Client.HTTP do
   @moduledoc """
   A JSON RPC HTTP Client.
+
+  ## Examples
+
+      a = 1
+      iex> defmodule MyDemo do
+      ...>   use JSONRPC2.Client.HTTP
+      ...>
+      ...>   defcall add(a, b)
+      ...>
+      ...>   defnotify hello(who)
+      ...> end
+      iex> MyDemo.add(1, 2)
+      {:call, "mydemo_add", [1, 2]}
+      iex> MyDemo.hello("John")
+      {:notify, "mydemo_hello", ["John"]}
   """
 
   alias JSONRPC2.{Misc, Request, Response}

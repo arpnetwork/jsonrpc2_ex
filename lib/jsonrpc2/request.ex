@@ -41,13 +41,44 @@ defmodule JSONRPC2.Request do
 
   @doc """
   Returns the `id` of `Request` object.
+
+  ## Examples
+
+      iex> alias JSONRPC2.Request
+      iex> Request.new("subtract") |> Request.id()
+      nil
+      iex> Request.new("subtract", id: "1") |> Request.id()
+      "1"
   """
   def id(req) do
     if is_id(req.id), do: req.id
   end
 
   @doc """
+  Returns the `params` of `Request` object.
+
+  ## Examples
+
+      iex> alias JSONRPC2.Request
+      iex> Request.new("subtract") |> Request.params()
+      []
+      iex> Request.new("subtract", params: [1]) |> Request.params()
+      [1]
+  """
+  def params(req) do
+    if is_params(req.params), do: req.params, else: []
+  end
+
+  @doc """
   Returns true if `req` is a notify `Request` object; otherwise returns false.
+
+  ## Examples
+
+      iex> alias JSONRPC2.Request
+      iex> Request.new("subtract") |> Request.is_notify()
+      true
+      iex> Request.new("subtract", id: 1) |> Request.is_notify()
+      false
   """
   def is_notify(req) do
     valid?(req) && req.id == :undefined

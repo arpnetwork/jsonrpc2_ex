@@ -12,6 +12,13 @@ defmodule JSONRPC2.MixProject do
       package: [
         licenses: ["Apache 2.0"],
         links: %{"GitHub" => "https://github.com/arpnetwork/jsonrpc2_ex"}
+      ],
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
       ]
     ]
   end
@@ -29,7 +36,9 @@ defmodule JSONRPC2.MixProject do
       {:poison, "~> 4.0 or ~> 3.0"},
       {:plug, "~> 1.6"},
       {:hackney, "~> 1.13"},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
+      {:cowboy, "~> 2.4", only: :test},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 end

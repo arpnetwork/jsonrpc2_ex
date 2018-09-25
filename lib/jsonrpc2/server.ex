@@ -86,7 +86,7 @@ defmodule JSONRPC2.Server do
   def apply(server, %Request{} = req) do
     if Request.valid?(req) do
       with {mod, fun} <- parse(req.method) do
-        res = do_apply(server, mod, fun, req.params)
+        res = do_apply(server, mod, fun, Request.params(req))
 
         unless Request.is_notify(req) do
           id = req.id

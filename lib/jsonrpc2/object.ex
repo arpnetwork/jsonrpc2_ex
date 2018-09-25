@@ -7,11 +7,31 @@ defmodule JSONRPC2.Object do
 
   @doc """
   Returns `true` if `term` is an `id`; otherwise returns `false`.
+
+  ## Examples
+
+      iex> alias JSONRPC2.Object
+      iex> Object.is_id("123")
+      true
+      iex> Object.is_id(123)
+      true
+      iex> Object.is_id(:undefined)
+      false
   """
   defguard is_id(term) when is_binary(term) or is_integer(term)
 
   @doc """
   Returns `true` if `term` is a `params`; otherwise returns `false`.
+
+  ## Examples
+
+      iex> alias JSONRPC2.Object
+      iex> Object.is_params(["123"])
+      true
+      iex> Object.is_params(%{name: "123"})
+      true
+      iex> Object.is_params("123")
+      false
   """
   defguard is_params(term) when is_list(term) or is_map(term)
 
