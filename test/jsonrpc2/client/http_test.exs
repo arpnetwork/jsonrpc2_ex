@@ -37,29 +37,29 @@ defmodule JSONRPC2.Client.HTTPTest do
   use ExUnit.Case
   doctest JSONRPC2.Client.HTTP
 
-  @url "http://127.0.0.1:3000/"
-
   setup_all do
     alias Plug.Adapters.Cowboy2
 
-    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, [modules: [DemoServer]], port: 3000)
+    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, [modules: [DemoServer]], port: 0)
+    ref = JSONRPC2.Server.Plug.HTTP
+    port = :ranch.get_port(ref)
 
     on_exit(fn ->
-      Cowboy2.shutdown(JSONRPC2.Server.Plug.HTTP)
+      Cowboy2.shutdown(ref)
     end)
 
-    :ok
+    [url: "http://127.0.0.1:#{port}/"]
   end
 
-  test "call" do
-    assert Demo.add(@url, 1, 2) == {:ok, 3}
+  test "call", %{url: url} do
+    assert Demo.add(url, 1, 2) == {:ok, 3}
   end
 
-  test "notify" do
-    assert Demo.hello(@url, %{name: "John"}) == :ok
+  test "notify", %{url: url} do
+    assert Demo.hello(url, %{name: "John"}) == :ok
   end
 
-  test "batch" do
+  test "batch", %{url: url} do
     require Demo
 
     reqs = [
@@ -67,10 +67,10 @@ defmodule JSONRPC2.Client.HTTPTest do
       {:notify, "demo_hi"}
     ]
 
-    assert HTTP.batch(@url, reqs) == [{:ok, "Hi by demo_hi"}]
+    assert HTTP.batch(url, reqs) == [{:ok, "Hi by demo_hi"}]
 
     res =
-      Demo.batch @url do
+      Demo.batch url do
         hello("John")
         add(1, 2)
         add(2, 3)
@@ -79,19 +79,19 @@ defmodule JSONRPC2.Client.HTTPTest do
     assert res == [{:ok, 3}, {:ok, 5}]
   end
 
-  test "invalid request" do
+  test "invalid request", %{url: url} do
     assert_raise ArgumentError, fn ->
-      HTTP.call(@url, "", 1)
+      HTTP.call(url, "", 1)
     end
   end
 
-  test "error response" do
+  test "error response", %{url: url} do
     assert_raise JSONRPC2.Client.HTTPError, fn ->
-      Demo.fail!("http://127.0.0.1:3001/")
+      Demo.fail!("http://127.0.0.1:1234/")
     end
 
     assert_raise JSONRPC2.Client.HTTPError, fn ->
-      Demo.fail!(@url)
+      Demo.fail!(url)
     end
   end
 end

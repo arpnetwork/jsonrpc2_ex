@@ -4,12 +4,12 @@ defmodule JSONRPC2.PlugTest do
   setup_all do
     alias Plug.Adapters.Cowboy2
 
-    port = 3000
-
-    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, [], port: port)
+    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, [], port: 0)
+    ref = JSONRPC2.Server.Plug.HTTP
+    port = :ranch.get_port(ref)
 
     on_exit(fn ->
-      Cowboy2.shutdown(JSONRPC2.Server.Plug.HTTP)
+      Cowboy2.shutdown(ref)
     end)
 
     [url: "http://127.0.0.1:#{port}/"]
