@@ -90,14 +90,18 @@ defmodule JSONRPC2.Client.HTTP do
   Makes a synchronous call to the JSON RPC server and waits for its reply.
   """
   def call(url, method, params \\ :undefind) do
-    build({:call, method, params}) |> run(url)
+    {:call, method, params}
+    |> build()
+    |> run(url)
   end
 
   @doc """
   Makes a synchronous notify to the JSON RPC server.
   """
   def notify(url, method, params \\ :undefined) do
-    build({:notify, method, params}) |> run(url)
+    {:notify, method, params}
+    |> build()
+    |> run(url)
   end
 
   @doc """
@@ -162,14 +166,12 @@ defmodule JSONRPC2.Client.HTTP do
     data = Request.encode!(req)
 
     id =
-      cond do
-        is_list(req) ->
-          req
-          |> Enum.map(&Request.id/1)
-          |> Enum.reject(&is_nil/1)
-
-        true ->
-          Request.id(req)
+      if is_list(req) do
+        req
+        |> Enum.map(&Request.id/1)
+        |> Enum.reject(&is_nil/1)
+      else
+        Request.id(req)
       end
 
     headers = [
@@ -178,7 +180,7 @@ defmodule JSONRPC2.Client.HTTP do
 
     with {:ok, status, _headers, body} <- :hackney.post(url, headers, data, [:with_body]),
          :ok <- Plug.Conn.Status.reason_atom(status) do
-      unless Misc.blank?(id) do
+      if not Misc.blank?(id) do
         with {:ok, resp} <- Response.decode(body) do
           if Misc.all?(resp, &Response.valid?/1) do
             transform(resp, id)

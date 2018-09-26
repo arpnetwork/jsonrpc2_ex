@@ -31,8 +31,8 @@ defmodule JSONRPC2.Client.HTTPTest.Demo do
 end
 
 defmodule JSONRPC2.Client.HTTPTest do
-  alias JSONRPC2.Client.HTTPTest.{DemoServer, Demo}
   alias JSONRPC2.Client.HTTP
+  alias JSONRPC2.Client.HTTPTest.{Demo, DemoServer}
 
   use ExUnit.Case
   doctest JSONRPC2.Client.HTTP
@@ -40,11 +40,12 @@ defmodule JSONRPC2.Client.HTTPTest do
   @url "http://127.0.0.1:3000/"
 
   setup_all do
-    {:ok, _} =
-      Plug.Adapters.Cowboy2.http(JSONRPC2.Server.Plug, [modules: [DemoServer]], port: 3000)
+    alias Plug.Adapters.Cowboy2
+
+    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, [modules: [DemoServer]], port: 3000)
 
     on_exit(fn ->
-      Plug.Adapters.Cowboy2.shutdown(JSONRPC2.Server.Plug.HTTP)
+      Cowboy2.shutdown(JSONRPC2.Server.Plug.HTTP)
     end)
 
     :ok

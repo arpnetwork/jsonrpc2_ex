@@ -24,9 +24,19 @@ defmodule JSONRPC2.Server.Handler do
   defmacro __before_compile__(env) do
     mod = env.module
 
-    functions = Module.definitions_in(mod) |> Keyword.keys()
-    only = Module.get_attribute(mod, :only) |> check_functions(functions)
-    except = Module.get_attribute(mod, :except) |> check_functions(functions)
+    functions =
+      mod
+      |> Module.definitions_in()
+      |> Keyword.keys()
+
+    get_functions = fn key ->
+      mod
+      |> Module.get_attribute(key)
+      |> check_functions(functions)
+    end
+
+    only = get_functions.(:only)
+    except = get_functions.(:except)
 
     functions =
       cond do

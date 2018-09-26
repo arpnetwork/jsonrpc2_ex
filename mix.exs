@@ -38,7 +38,8 @@ defmodule JSONRPC2.MixProject do
       {:hackney, "~> 1.13"},
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
       {:cowboy, "~> 2.4", only: :test},
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.10", only: :test},
+      {:credo, "~> 0.10.0", only: [:dev, :test], runtime: false}
     ]
   end
 end

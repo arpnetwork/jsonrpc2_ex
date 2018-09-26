@@ -77,7 +77,9 @@ defmodule JSONRPC2.Misc do
   Generates and returns an id that is unique in the current runtime instance.
   """
   def unique_id do
-    System.unique_integer([:positive]) |> Integer.to_string()
+    [:positive]
+    |> System.unique_integer()
+    |> Integer.to_string()
   end
 
   @doc """

@@ -3,8 +3,8 @@ defmodule JSONRPC2.ObjectTest.Request do
 end
 
 defmodule JSONRPC2.ObjectTest do
-  alias JSONRPC2.ObjectTest.Request
   alias JSONRPC2.Object
+  alias JSONRPC2.ObjectTest.Request
 
   use ExUnit.Case
   doctest JSONRPC2.Object

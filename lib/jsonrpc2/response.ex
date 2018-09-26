@@ -104,7 +104,7 @@ defmodule JSONRPC2.Response do
       message: message
     }
 
-    err = unless is_nil(data), do: Map.put(err, :data, data), else: err
+    err = if not is_nil(data), do: Map.put(err, :data, data), else: err
     new(error: err, id: id)
   end
 
@@ -175,13 +175,13 @@ defmodule JSONRPC2.Response do
   """
   def reason_to_code(reason) when is_atom(reason) do
     case reason do
-      :parse_error -> -32700
-      :invalid_request -> -32600
-      :method_not_found -> -32601
-      :invalid_params -> -32602
-      :internal_error -> -32603
-      :server_error -> -32000
-      _ -> -32099
+      :parse_error -> -32_700
+      :invalid_request -> -32_600
+      :method_not_found -> -32_601
+      :invalid_params -> -32_602
+      :internal_error -> -32_603
+      :server_error -> -32_000
+      _ -> -32_099
     end
   end
 

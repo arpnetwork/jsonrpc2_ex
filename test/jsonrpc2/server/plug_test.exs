@@ -2,12 +2,14 @@ defmodule JSONRPC2.PlugTest do
   use ExUnit.Case
 
   setup_all do
+    alias Plug.Adapters.Cowboy2
+
     port = 3000
 
-    {:ok, _} = Plug.Adapters.Cowboy2.http(JSONRPC2.Server.Plug, [], port: port)
+    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, [], port: port)
 
     on_exit(fn ->
-      Plug.Adapters.Cowboy2.shutdown(JSONRPC2.Server.Plug.HTTP)
+      Cowboy2.shutdown(JSONRPC2.Server.Plug.HTTP)
     end)
 
     [url: "http://127.0.0.1:#{port}/"]
