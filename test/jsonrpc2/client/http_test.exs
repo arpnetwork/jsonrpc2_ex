@@ -1,5 +1,5 @@
 defmodule JSONRPC2.Client.HTTPTest.DemoServer do
-  use JSONRPC2.Server.Handler, name: :demo, only: [:add, :hello, :hi]
+  use JSONRPC2.Server.Module, name: :demo, only: [:add, :hello, :hi]
 
   def add(a, b) do
     {:ok, a + b}
@@ -10,7 +10,7 @@ defmodule JSONRPC2.Client.HTTPTest.DemoServer do
   end
 
   def hi do
-    {:ok, "Hi by #{method()}"}
+    {:ok, "Hi"}
   end
 
   def fail do
@@ -33,6 +33,7 @@ end
 defmodule JSONRPC2.Client.HTTPTest do
   alias JSONRPC2.Client.HTTP
   alias JSONRPC2.Client.HTTPTest.{Demo, DemoServer}
+  alias JSONRPC2.Server.ModuleHandler
 
   use ExUnit.Case
   doctest JSONRPC2.Client.HTTP
@@ -40,7 +41,7 @@ defmodule JSONRPC2.Client.HTTPTest do
   setup_all do
     alias Plug.Adapters.Cowboy2
 
-    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, [modules: [DemoServer]], port: 0)
+    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, {ModuleHandler, [DemoServer]}, port: 0)
     ref = JSONRPC2.Server.Plug.HTTP
     port = :ranch.get_port(ref)
 
@@ -67,7 +68,7 @@ defmodule JSONRPC2.Client.HTTPTest do
       {:notify, "demo_hi"}
     ]
 
-    assert HTTP.batch(url, reqs) == [{:ok, "Hi by demo_hi"}]
+    assert HTTP.batch(url, reqs) == [{:ok, "Hi"}]
 
     res =
       Demo.batch url do

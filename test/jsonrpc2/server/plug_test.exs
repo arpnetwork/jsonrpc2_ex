@@ -1,10 +1,20 @@
+defmodule JSONRPC2.PlugTest.Demo do
+  use JSONRPC2.Server.Handler
+
+  on request("add", [a, b]) do
+    {:ok, a + b}
+  end
+end
+
 defmodule JSONRPC2.PlugTest do
+  alias JSONRPC2.PlugTest.Demo
+
   use ExUnit.Case
 
   setup_all do
     alias Plug.Adapters.Cowboy2
 
-    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, [], port: 0)
+    {:ok, _} = Cowboy2.http(JSONRPC2.Server.Plug, Demo, port: 0)
     ref = JSONRPC2.Server.Plug.HTTP
     port = :ranch.get_port(ref)
 

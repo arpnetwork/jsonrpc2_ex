@@ -1,12 +1,20 @@
 defmodule JSONRPC2.ServerTest.Demo do
   use JSONRPC2.Server.Handler
 
-  def add(a, b) do
+  on request("add", [a, b]) do
     {:ok, a + b}
   end
 
-  def fail do
+  on request("hi") do
+    :ok
+  end
+
+  on request("fail") do
     raise ArgumentError
+  end
+
+  on request("extra", [], %{extra: extra}) do
+    {:ok, extra}
   end
 end
 
@@ -19,58 +27,52 @@ defmodule JSONRPC2.ServerTest do
   import ExUnit.CaptureLog
 
   setup do
-    [server: Server.new([Demo])]
+    server = Server.new(Demo)
+
+    on_exit(fn ->
+      Server.delete(server)
+    end)
+
+    [server: server]
   end
 
-  test "register" do
-    server = Server.new()
-
-    assert Server.modules(server) == []
-    Server.register(server, Demo)
-    assert Server.modules(server) == [:demo]
-    assert Server.functions(server, :demo) == [:add, :fail]
-
-    Server.delete(server)
-  end
-
-  test "unregister", %{server: server} do
-    Server.unregister(server, Demo)
-    assert Server.modules(server) == []
-
-    Server.register(server, Demo)
-    Server.unregister(server, :demo)
-    assert Server.modules(server) == []
-  end
-
-  test "apply", %{server: server} do
-    req = Request.new("demo_add", params: [1, 2], id: 1)
+  test "perform", %{server: server} do
+    req = Request.new("add", params: [1, 2], id: 1)
     resp = Response.result(3, 1)
-    assert Server.apply(server, req) == resp
+    assert Server.perform(server, req) == resp
 
     req = req |> Request.encode!()
-    assert Server.apply(server, req) == resp
+    assert Server.perform(server, req) == Response.encode!(resp)
 
     req = "[#{req},#{req}]"
-    assert Server.apply(server, req) == [resp, resp]
+    assert Server.perform(server, req) == Response.encode!([resp, resp])
+
+    req = Request.new("hi", id: 2)
+    assert Server.perform(server, req) == Response.result(nil, 2)
   end
 
-  test "apply failed", %{server: server} do
+  test "perform extra context", %{server: server} do
+    req = Request.new("extra", id: 1)
+    assert Server.perform(server, req, %{extra: 3}) == Response.result(3, 1)
+  end
+
+  test "perform failed", %{server: server} do
     req = ""
-    assert Server.apply(server, req) == Response.error(:parse_error)
+    assert Server.perform(server, req) == Response.encode!(Response.error(:parse_error))
 
     req = %Request{}
-    assert Server.apply(server, req) == Response.error(:invalid_request)
+    assert Server.perform(server, req) == Response.error(:invalid_request)
 
-    req = Request.new("demo_add2", id: 1)
-    assert Server.apply(server, req) == Response.error(:method_not_found, 1)
+    req = Request.new("add2", id: 1)
+    assert Server.perform(server, req) == Response.error(:method_not_found, 1)
 
-    req = Request.new("demo_add", id: 2)
-    assert Server.apply(server, req) == Response.error(:invalid_params, 2)
+    req = Request.new("add", id: 2)
+    assert Server.perform(server, req) == Response.error(:invalid_params, 2)
 
-    req = Request.new("demo_fail", id: 3)
+    req = Request.new("fail", id: 3)
 
     assert capture_log(fn ->
-             assert Server.apply(server, req) == Response.error(:internal_error, 3)
+             assert Server.perform(server, req) == Response.error(:internal_error, 3)
            end) =~ "ArgumentError"
   end
 end

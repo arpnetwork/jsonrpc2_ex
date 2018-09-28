@@ -3,16 +3,18 @@ defmodule JSONRPC2.Server.Plug do
   JSON RPC Server for Plug.
   """
 
-  alias JSONRPC2.{Response, Server}
+  alias JSONRPC2.Server
   alias Plug.Conn.{Status, Utils}
 
-  import JSONRPC2.Misc, only: :macros
   import Plug.Conn
 
   @doc false
-  def init(opts) do
-    {modules, opts} = Keyword.pop(opts, :modules, [])
-    Keyword.put(opts, :rpc, Server.new(modules))
+  def init({module, opts}) do
+    [rpc: Server.new(module, opts)]
+  end
+
+  def init(module) when is_atom(module) do
+    [rpc: Server.new(module)]
   end
 
   @doc false
@@ -22,31 +24,19 @@ defmodule JSONRPC2.Server.Plug do
          {_, type} when is_binary(type) <- List.keyfind(conn.req_headers, "content-type", 0),
          {:ok, "application", "json", _} <- Utils.media_type(type),
          {:ok, body, conn} <- read_body(conn) do
-      Process.put(:remote_ip, conn.remote_ip)
-
       server = Keyword.fetch!(opts, :rpc)
 
-      case Server.apply(server, body) do
-        %Response{} = resp ->
-          send_rpc_resp(conn, resp)
-
-        resps when is_nonempty_list(resps) ->
-          send_rpc_resp(conn, resps)
-
-        _ ->
-          send_resp(conn, :ok, "")
-      end
+      resp = Server.perform(server, body, %{remote_ip: conn.remote_ip})
+      send_rpc_resp(conn, resp)
     else
       _ -> send_resp(conn, :bad_request)
     end
   end
 
   defp send_rpc_resp(conn, resp) do
-    data = Response.encode!(resp)
-
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(:ok, data)
+    |> send_resp(:ok, resp)
   end
 
   defp send_resp(conn, status) when is_atom(status) do

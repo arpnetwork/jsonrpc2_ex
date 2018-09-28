@@ -1,50 +1,57 @@
-defmodule JSONRPC2.Server.HandlerTest.Demo1Server do
-  use JSONRPC2.Server.Handler, name: :demo1
+defmodule JSONRPC2.Server.HandlerTest.Demo do
+  use JSONRPC2.Server.Handler
 
-  def add(a, b) do
-    {:ok, a + b}
+  on request("add", [a, b], context) when is_integer(a) and is_integer(b) do
+    c = Map.get(context, :c, 0)
+    {:ok, a + b + c}
   end
 
-  def method_name do
-    method()
-  end
-end
-
-defmodule JSONRPC2.Server.HandlerTest.Demo2Server do
-  use JSONRPC2.Server.Handler, only: [:add]
-
-  def add(a, b) do
-    {:ok, a + b}
+  on request("hi", [who]) when is_binary(who) do
+    IO.puts("Hi #{who}")
   end
 
-  def fail do
-    :ok
-  end
-end
-
-defmodule JSONRPC2.Server.HandlerTest.Demo3Server do
-  use JSONRPC2.Server.Handler, except: [:fail]
-
-  def add(a, b) do
-    {:ok, a + b}
-  end
-
-  def fail do
-    :ok
+  on request("fail") do
+    raise ArgumentError
   end
 end
 
 defmodule JSONRPC2.Server.HandlerTest do
-  alias JSONRPC2.Server.HandlerTest.{Demo1Server, Demo2Server, Demo3Server}
+  alias JSONRPC2.Server.HandlerTest.Demo
+
+  import ExUnit.CaptureIO
 
   use ExUnit.Case
 
-  test "handler" do
-    assert Demo1Server.__name__() == :demo1
-    assert Demo1Server.__functions__() == [:add, :method_name]
-    assert Demo2Server.__functions__() == [:add]
-    assert Demo3Server.__functions__() == [:add]
+  test "perform" do
+    assert Demo.perform("add", [1, 2], %{c: 3}) == {:ok, 6}
 
-    assert Demo1Server.method_name() == "demo1_methodName"
+    assert capture_io(fn ->
+             assert Demo.perform("hi", ["R"]) == :ok
+           end) == "Hi R\n"
+  end
+
+  test "perform failed" do
+    assert Demo.perform("add", [1]) == {:error, :invalid_params}
+    assert Demo.perform("add", [1, "2"]) == {:error, :invalid_params}
+  end
+
+  test "compile error" do
+    assert_raise CompileError, fn ->
+      defmodule CompileErrorDemo do
+        use JSONRPC2.Server.Handler
+
+        on norequest("fail") do
+        end
+      end
+    end
+
+    assert_raise CompileError, fn ->
+      defmodule CompileErrorDemo do
+        use JSONRPC2.Server.Handler
+
+        on request(fail) do
+        end
+      end
+    end
   end
 end

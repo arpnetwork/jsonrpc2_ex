@@ -3,81 +3,82 @@ defmodule JSONRPC2.Server.Handler do
   JSON RPC Server handler.
   """
 
-  alias JSONRPC2.Misc
-
-  defmacro __using__(opts) do
-    name = Keyword.get_lazy(opts, :name, fn -> Misc.module_name(__CALLER__.module) end)
-    only = Keyword.get(opts, :only)
-    except = Keyword.get(opts, :except)
-
-    quote do
+  defmacro __using__(_opts) do
+    quote location: :keep do
       import JSONRPC2.Server.Handler
 
       @before_compile JSONRPC2.Server.Handler
 
-      @name unquote(name)
-      @only unquote(only)
-      @except unquote(except)
+      @methods []
+
+      def init(opts) when is_map(opts) do
+        opts
+      end
+
+      def terminate(_context) do
+      end
+
+      defoverridable init: 1, terminate: 1
     end
   end
 
   defmacro __before_compile__(env) do
-    mod = env.module
-
-    functions =
-      mod
-      |> Module.definitions_in()
-      |> Keyword.keys()
-
-    get_functions = fn key ->
-      mod
-      |> Module.get_attribute(key)
-      |> check_functions(functions)
-    end
-
-    only = get_functions.(:only)
-    except = get_functions.(:except)
-
-    functions =
-      cond do
-        not is_nil(only) -> only
-        not is_nil(except) -> functions -- except
-        true -> functions
+    default_handle_request =
+      if not Module.defines?(env.module, {:handle_request, 3}, :defp) do
+        quote location: :keep do
+          defp handle_request(_method, _params, _context) do
+            {:error, :method_not_found}
+          end
+        end
+      else
+        quote do
+        end
       end
 
-    quote do
-      def __name__, do: @name
+    quote location: :keep do
+      unquote(default_handle_request)
 
-      def __functions__, do: unquote(functions)
+      def perform(method, params, context \\ %{}) do
+        handle_request(method, params, context)
+      rescue
+        e in FunctionClauseError ->
+          if match?(
+               %FunctionClauseError{module: __MODULE__, function: :handle_request, arity: 3},
+               e
+             ) do
+            if Enum.member?(@methods, method) do
+              {:error, :invalid_params}
+            else
+              {:error, :method_not_found}
+            end
+          else
+            reraise(e, System.stacktrace())
+          end
+      end
     end
   end
 
-  @doc """
-  Returns current JSON RPC method name.
-  """
-  defmacro method do
-    mod = Module.get_attribute(__CALLER__.module, :name)
-    fun = elem(__CALLER__.function, 0)
-    name = Misc.to_method_name(mod, fun)
+  defmacro on(call, expr) do
+    vars = &List.duplicate(Macro.var(:_, nil), &1)
 
-    quote do
-      unquote(name)
+    fun = fn
+      {:request, meta, [method | _] = args}, nil ->
+        {{:handle_request, meta, args ++ vars.(3 - length(args))}, method}
+
+      other, method ->
+        {other, method}
     end
-  end
 
-  defp check_functions(nil, _), do: nil
+    case Macro.postwalk(call, nil, fun) do
+      {call, method} when is_binary(method) ->
+        quote do
+          @methods [unquote(method) | @methods]
 
-  defp check_functions(list, functions) when is_list(list) do
-    assert(list == Enum.uniq(list))
+          defp unquote(call), unquote(expr)
+        end
 
-    Enum.each(list, fn fun ->
-      assert(is_atom(fun) && Enum.member?(functions, fun))
-    end)
-
-    list
-  end
-
-  defp assert(expression) do
-    unless expression, do: raise(CompileError)
+      _ ->
+        raise CompileError
+    end
   end
 end
