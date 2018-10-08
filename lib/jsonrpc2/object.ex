@@ -66,7 +66,12 @@ defmodule JSONRPC2.Object do
   """
   def transform(value, as) when is_map(value) do
     trans = fn {key, default}, acc ->
-      Map.put(acc, key, Map.get(value, Atom.to_string(key), default))
+      value =
+        Map.get_lazy(value, Atom.to_string(key), fn ->
+          Map.get(value, key, default)
+        end)
+
+      Map.put(acc, key, value)
     end
 
     fields =
