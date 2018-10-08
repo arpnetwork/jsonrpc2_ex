@@ -53,10 +53,14 @@ defmodule JSONRPC2.Client.HTTPTest do
   end
 
   test "call", %{url: url} do
+    assert HTTP.call(url, "demo_hi") == {:ok, "Hi"}
+
     assert Demo.add(url, 1, 2) == {:ok, 3}
   end
 
   test "notify", %{url: url} do
+    assert HTTP.notify(url, "demo_hi") == :ok
+
     assert Demo.hello(url, %{name: "John"}) == :ok
   end
 

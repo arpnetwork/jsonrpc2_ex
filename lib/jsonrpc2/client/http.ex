@@ -89,7 +89,7 @@ defmodule JSONRPC2.Client.HTTP do
   @doc """
   Makes a synchronous call to the JSON RPC server and waits for its reply.
   """
-  def call(url, method, params \\ :undefind) do
+  def call(url, method, params \\ :undefined) do
     {:call, method, params}
     |> build()
     |> run(url)
@@ -178,22 +178,25 @@ defmodule JSONRPC2.Client.HTTP do
       {"Content-Type", "application/json"}
     ]
 
-    with {:ok, status, _headers, body} <- :hackney.post(url, headers, data, [:with_body]),
-         :ok <- Plug.Conn.Status.reason_atom(status) do
-      if not Misc.blank?(id) do
-        with {:ok, resp} <- Response.decode(body) do
-          if Misc.all?(resp, &Response.valid?/1) do
-            transform(resp, id)
+    case :hackney.post(url, headers, data, [:with_body]) do
+      {:ok, status, _headers, body} ->
+        status = Plug.Conn.Status.reason_atom(status)
+
+        if status == :ok do
+          if not Misc.blank?(id) do
+            with {:ok, resp} <- Response.decode(body) do
+              if Misc.all?(resp, &Response.valid?/1) do
+                transform(resp, id)
+              else
+                {:error, :invalid_response}
+              end
+            end
           else
-            {:error, :invalid_response}
+            :ok
           end
+        else
+          {:error, status}
         end
-      else
-        :ok
-      end
-    else
-      reason when is_atom(reason) ->
-        {:error, reason}
 
       reason ->
         reason
