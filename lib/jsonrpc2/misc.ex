@@ -74,15 +74,6 @@ defmodule JSONRPC2.Misc do
   end
 
   @doc """
-  Generates and returns an id that is unique in the current runtime instance.
-  """
-  def unique_id do
-    [:positive]
-    |> System.unique_integer()
-    |> Integer.to_string()
-  end
-
-  @doc """
   Converts the given string to CamelCase format.
 
   ## Examples

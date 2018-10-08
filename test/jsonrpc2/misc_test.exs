@@ -4,16 +4,6 @@ defmodule JSONRPC2.MiscTest do
   use ExUnit.Case
   doctest JSONRPC2.Misc
 
-  test "unique_id" do
-    len =
-      1..1000
-      |> Enum.map(fn _ -> Misc.unique_id() end)
-      |> Enum.uniq()
-      |> length()
-
-    assert len == 1000
-  end
-
   test "map & all?" do
     to_s = fn v ->
       Misc.map(v, &Integer.to_string/1)

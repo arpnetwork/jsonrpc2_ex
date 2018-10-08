@@ -230,7 +230,12 @@ defmodule JSONRPC2.Client.HTTP do
   end
 
   defp build({:call, method, params}) do
-    Request.new(method, params: params, id: Misc.unique_id())
+    id =
+      [:positive, :monotonic]
+      |> System.unique_integer()
+      |> Integer.to_string()
+
+    Request.new(method, params: params, id: id)
   end
 
   defp build({:notify, method}) do
